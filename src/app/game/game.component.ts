@@ -13,6 +13,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { GameInfoComponent } from "../game-info/game-info.component";
 import { GameService } from '../services/game.service';
 import { ActivatedRoute } from '@angular/router';
+import { Params } from '@angular/router';
 
 @Component({
   selector: 'app-game',
@@ -44,12 +45,22 @@ export class GameComponent {
 
   ngOnInit(): void {
     this.subscribeToGames();  
+    this.loadGameFromRoute();
     this.route.params.subscribe((params) => {
     const gameId = params['id']; 
     if (gameId) {
       this.loadGameById(gameId);
     }
   });
+  }
+
+  loadGameFromRoute(): void {
+    this.route.params.subscribe((params: Params) => {
+      const gameId = params['id']; 
+      if (gameId) {
+        this.loadGameById(gameId);
+      }
+    });
   }
 
   async loadGameById(gameId: string): Promise<void> {
@@ -59,13 +70,13 @@ export class GameComponent {
         this.game = fetchedGame;
         console.log('Spiel erfolgreich geladen:', this.game);
       } else {
-        console.warn('Kein Spiel gefunden.');
-        this.game = new Game(); 
+        console.warn('Kein Spiel mit dieser ID gefunden.');
       }
     } catch (error) {
       console.error('Fehler beim Laden des Spiels:', error);
     }
   }
+
 
   newGame(): void {
     const newGame = new Game();
@@ -85,16 +96,36 @@ export class GameComponent {
 
   takeCard() {
     if (!this.pickCardAnimation) {
-      this.currentCard = this.game.stack.pop();
-      this.pickCardAnimation = true;
-      this.game.currentPlayer++;
-      this.game.currentPlayer = this.game.currentPlayer % this.game.players.length;
-      setTimeout(() => {
-        this.game.playedCard.push(this.currentCard!);
-        this.pickCardAnimation = false;
-      }, 1000);
+      const card = this.game.stack.pop(); 
+      if (card) {
+        this.currentCard = card;
+        this.pickCardAnimation = true;
+  
+        this.game.currentPlayer++;
+        this.game.currentPlayer = this.game.currentPlayer % this.game.players.length;
+  
+        setTimeout(() => {
+          this.game.playedCard.push(this.currentCard!);
+          this.pickCardAnimation = false;
+  
+          this.updateGameInFirebase();
+        }, 1000);
+      }
     }
   }
+  
+  updateGameInFirebase(): void {
+    if (this.game.id) {
+      this.gameService.updateGame(this.game.id, this.game)
+        .then(() => {
+          console.log('Spiel in Firebase aktualisiert.');
+        })
+        .catch(error => {
+          console.error('Fehler beim Aktualisieren des Spiels:', error);
+        });
+    }
+  }
+  
 
   openDialog(): void {
     const dialogRef = this.dialog.open(DialogAddPlayerComponent, {

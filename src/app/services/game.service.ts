@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { doc, getDoc } from '@angular/fire/firestore';
+import { doc, getDoc, updateDoc  } from '@angular/fire/firestore';
 import { Firestore, collection, collectionData, addDoc } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 import { Game } from '../../models/game';
@@ -15,8 +15,9 @@ export class GameService {
 
   getGamesSnapshot(): Observable<Game[]> {
     const gamesCollection = collection(this.firestore, 'Games');
-    return collectionData(gamesCollection, { idField: 'Games' }) as Observable<Game[]>;
+    return collectionData(gamesCollection, { idField: 'id' }) as Observable<Game[]>;
   }
+  
 
   async addNewGame(game: Game): Promise<string> {
   const gamesCollection = collection(this.firestore, 'Games');
@@ -26,17 +27,22 @@ export class GameService {
 }
 
 
-  async getGameById(gameId: string): Promise<Game | undefined> {
-    const gameDocRef = doc(this.firestore, `Games/${gameId}`);
-    const gameSnapshot = await getDoc(gameDocRef);
-    
-    if (gameSnapshot.exists()) {
-      const gameData = gameSnapshot.data() as Game;
-      return { id: gameSnapshot.id, ...gameData };
-    } else {
-      console.error('Kein Spiel mit der angegebenen ID gefunden.');
-      return undefined;
-    }
+async getGameById(gameId: string): Promise<Game | undefined> {
+  const gameDocRef = doc(this.firestore, `Games/${gameId}`);
+  const gameSnapshot = await getDoc(gameDocRef);
+
+  if (gameSnapshot.exists()) {
+    const gameData = gameSnapshot.data() as Game;
+    return { id: gameSnapshot.id, ...gameData };
+  } else {
+    console.error('Kein Spiel mit der angegebenen ID gefunden.');
+    return undefined;
   }
+}
+
+async updateGame(gameId: string, updatedGame: Game): Promise<void> {
+  const gameDocRef = doc(this.firestore, `Games/${gameId}`);
+  await updateDoc(gameDocRef, { ...updatedGame });
+}
 }
 
