@@ -12,6 +12,7 @@ import { DialogAddPlayerComponent } from '../dialog-add-player/dialog-add-player
 import { MatDialog } from '@angular/material/dialog';
 import { GameInfoComponent } from "../game-info/game-info.component";
 import { GameService } from '../services/game.service';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-game',
@@ -37,12 +38,33 @@ export class GameComponent {
   name: string | undefined = '';
   animal: string | undefined = '';
 
-  constructor(public dialog: MatDialog, private gameService: GameService) {
+  constructor(public dialog: MatDialog, private gameService: GameService, private route: ActivatedRoute) {
     this.game = new Game();
   }
 
   ngOnInit(): void {
     this.subscribeToGames();  
+    this.route.params.subscribe((params) => {
+    const gameId = params['id']; 
+    if (gameId) {
+      this.loadGameById(gameId);
+    }
+  });
+  }
+
+  async loadGameById(gameId: string): Promise<void> {
+    try {
+      const fetchedGame = await this.gameService.getGameById(gameId);
+      if (fetchedGame) {
+        this.game = fetchedGame;
+        console.log('Spiel erfolgreich geladen:', this.game);
+      } else {
+        console.warn('Kein Spiel gefunden.');
+        this.game = new Game(); 
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden des Spiels:', error);
+    }
   }
 
   newGame(): void {
