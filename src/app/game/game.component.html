@@ -1,4 +1,4 @@
-<app-player *ngFor="let player of game.player; let i = index" class="player-position" 
+<app-player *ngFor="let player of game.players; let i = index" class="player-position" 
 [playerActive]="i == game.currentPlayer"
 [name]="player" 
     [ngStyle]="{'top.px': 60 + (i * 80)}"></app-player>
@@ -24,3 +24,4 @@
 <button mat-fab (click)="openDialog()" class="add-btn">
     <mat-icon>add</mat-icon>
 </button>
+<button mat-button (click)="newGame()">Neues Spiel erstellen</button>

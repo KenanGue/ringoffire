@@ -11,6 +11,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { DialogAddPlayerComponent } from '../dialog-add-player/dialog-add-player.component';
 import { MatDialog } from '@angular/material/dialog';
 import { GameInfoComponent } from "../game-info/game-info.component";
+import { GameService } from '../services/game.service';
 
 @Component({
   selector: 'app-game',
@@ -22,36 +23,50 @@ import { GameInfoComponent } from "../game-info/game-info.component";
     MatDialogModule,
     MatInputModule,
     FormsModule,
-    MatFormFieldModule, GameInfoComponent],
+    MatFormFieldModule,
+    GameInfoComponent,
+  ],
   templateUrl: './game.component.html',
-  styleUrls: ['./game.component.scss']
+  styleUrls: ['./game.component.scss'],
 })
 export class GameComponent {
+  games: Game[] = [];
   pickCardAnimation = false;
   game: Game;
   currentCard: string | undefined = '';
   name: string | undefined = '';
   animal: string | undefined = '';
 
-  constructor(public dialog: MatDialog) {
+  constructor(public dialog: MatDialog, private gameService: GameService) {
     this.game = new Game();
   }
 
   ngOnInit(): void {
-    this.newGame();
+    this.subscribeToGames();  
   }
 
-  newGame() {
-    this.game = new Game();
+  newGame(): void {
+    const newGame = new Game();
+    this.gameService.addNewGame(newGame).then(() => {
+      console.log('New game saved to Firebase');
+    }).catch((error) => {
+      console.error('Error adding new game:', error);
+    });
+  }
+  
+  subscribeToGames(): void {
+    this.gameService.getGamesSnapshot().subscribe((games: Game[]) => {
+      this.games = games;
+      console.log('Updated games:', this.games);
+    });
   }
 
   takeCard() {
     if (!this.pickCardAnimation) {
       this.currentCard = this.game.stack.pop();
       this.pickCardAnimation = true;
-
       this.game.currentPlayer++;
-      this.game.currentPlayer = this.game.currentPlayer % this.game.player.length;
+      this.game.currentPlayer = this.game.currentPlayer % this.game.players.length;
       setTimeout(() => {
         this.game.playedCard.push(this.currentCard!);
         this.pickCardAnimation = false;
@@ -61,12 +76,12 @@ export class GameComponent {
 
   openDialog(): void {
     const dialogRef = this.dialog.open(DialogAddPlayerComponent, {
-      data: { name: 'John Doe', animal: '' }
+      data: { name: 'John Doe', animal: '' },
     });
 
     dialogRef.afterClosed().subscribe((name: string) => {
       if (name && name.length > 0) {
-        this.game.player.push(name);
+        this.game.players.push(name);
       }
     });
   }
