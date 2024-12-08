@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
-import {MatCardModule} from '@angular/material/card';
+import { MatCardModule } from '@angular/material/card';
 
 
 @Component({
@@ -26,26 +26,35 @@ export class GameInfoComponent {
     { title: 'Never have i ever...', description: 'Say something you nnever did. Everyone who did it has to drink.' },
     { title: 'Rule', description: 'Make a rule. Everyone needs to drink when he breaks the rule.' },
   ];
-
-title: string = '';
-description: string = '';
-@Input() card: string | undefined;
-
-  constructor() {}
   
-  ngOnInit(): void {
+  @Input() set card(value: string | undefined) {
+    this.updateCardInfo(value);
   }
   
-  ngOnChanges(): void {  
-    if (this.card) {
-      let cardNumber = +this.card.split('_')[1];
+  title: string = 'Default Title';
+  description: string = 'Default Description';
+
+  constructor() { }
+
+  ngOnInit(): void {
+  }
+
+  private updateCardInfo(card: string | undefined): void {
+  if (card) {
+    const cardParts = card.split('_');
+    const cardNumber = cardParts.length > 1 ? +cardParts[1] : NaN;
+    if (!isNaN(cardNumber) && cardNumber > 0 && cardNumber <= this.cardAction.length) {
       this.title = this.cardAction[cardNumber - 1]?.title || '';
       this.description = this.cardAction[cardNumber - 1]?.description || '';
     } else {
-      this.title = 'Start the game';
-      this.description = 'Click on Card-Stack';
+      this.title = 'Invalid Card';
+      this.description = 'The card number is not valid.';
     }
+  } else {
+    this.title = 'Start the game';
+    this.description = 'Click on Card-Stack';
   }
-  
-  
+}
+
+
 }

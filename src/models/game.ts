@@ -4,6 +4,8 @@ export class Game {
     public stack: string[] = [];
     public playedCard: string[] = [];
     public currentPlayer: number = 0;
+    public pickCardAnimation: boolean = false;
+    public currentCard: string | undefined = '';
 
     constructor() {
         for (let i = 1; i < 14; i++) {

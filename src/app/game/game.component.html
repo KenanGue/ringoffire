@@ -19,9 +19,13 @@
     </div>
 </div>
 
-<app-game-info [card]="currentCard" class="pin-buttom"></app-game-info>
+<app-game-info 
+  [card]="currentCard || 'No card selected'" 
+  class="pin-buttom">
+</app-game-info>
+
+
 
 <button mat-fab (click)="openDialog()" class="add-btn">
     <mat-icon>add</mat-icon>
 </button>
-<button mat-button (click)="newGame()">Neues Spiel erstellen</button>

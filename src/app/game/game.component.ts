@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Game } from '../../models/game';
 import { PlayerComponent } from '../player/player.component';
 import { MatButtonModule } from '@angular/material/button';
@@ -13,7 +13,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { GameInfoComponent } from "../game-info/game-info.component";
 import { GameService } from '../services/game.service';
 import { ActivatedRoute } from '@angular/router';
-import { Params } from '@angular/router';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-game',
@@ -31,11 +31,12 @@ import { Params } from '@angular/router';
   templateUrl: './game.component.html',
   styleUrls: ['./game.component.scss'],
 })
-export class GameComponent {
+export class GameComponent implements OnInit, OnDestroy{
+  private gameSubscription: Subscription | null = null;
   games: Game[] = [];
   pickCardAnimation = false;
-  game: Game;
   currentCard: string | undefined = '';
+  game: Game;
   name: string | undefined = '';
   animal: string | undefined = '';
 
@@ -44,21 +45,36 @@ export class GameComponent {
   }
 
   ngOnInit(): void {
-    this.subscribeToGames();  
-    this.loadGameFromRoute();
+    this.subscribeToGames();
     this.route.params.subscribe((params) => {
-    const gameId = params['id']; 
-    if (gameId) {
-      this.loadGameById(gameId);
-    }
-  });
-  }
-
-  loadGameFromRoute(): void {
-    this.route.params.subscribe((params: Params) => {
-      const gameId = params['id']; 
+      const gameId = params['id'];
       if (gameId) {
         this.loadGameById(gameId);
+      }
+    });
+    this.route.params.subscribe((params) => {
+      const gameId = params['id'];
+      if (gameId) {
+        this.subscribeToGameUpdates(gameId);
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.gameSubscription) {
+      this.gameSubscription.unsubscribe();
+    }
+  }
+
+  subscribeToGameUpdates(gameId: string): void {
+    this.gameSubscription = this.gameService.getGameSnapshot(gameId).subscribe((updatedGame) => {
+      this.game = updatedGame;
+
+      // Synchronisiere die aktuelle Karte, falls vorhanden
+      if (this.game && this.game.playedCard.length > 0) {
+        this.currentCard = this.game.playedCard[this.game.playedCard.length - 1];
+      } else {
+        this.currentCard = '';
       }
     });
   }
@@ -70,23 +86,13 @@ export class GameComponent {
         this.game = fetchedGame;
         console.log('Spiel erfolgreich geladen:', this.game);
       } else {
-        console.warn('Kein Spiel mit dieser ID gefunden.');
+        console.warn('Kein Spiel gefunden.');
       }
     } catch (error) {
       console.error('Fehler beim Laden des Spiels:', error);
     }
   }
 
-
-  newGame(): void {
-    const newGame = new Game();
-    this.gameService.addNewGame(newGame).then(() => {
-      console.log('New game saved to Firebase');
-    }).catch((error) => {
-      console.error('Error adding new game:', error);
-    });
-  }
-  
   subscribeToGames(): void {
     this.gameService.getGamesSnapshot().subscribe((games: Game[]) => {
       this.games = games;
@@ -94,35 +100,34 @@ export class GameComponent {
     });
   }
 
-  takeCard() {
-    if (!this.pickCardAnimation) {
-      const card = this.game.stack.pop(); 
+  takeCard(): void {
+    if (!this.pickCardAnimation && this.game && this.game.stack.length > 0) {
+      const card = this.game.stack.pop();
       if (card) {
         this.currentCard = card;
         this.pickCardAnimation = true;
-  
+
         this.game.currentPlayer++;
         this.game.currentPlayer = this.game.currentPlayer % this.game.players.length;
-  
         setTimeout(() => {
+          if (this.game) {
           this.game.playedCard.push(this.currentCard!);
           this.pickCardAnimation = false;
-  
+
           this.updateGameInFirebase();
+          }
         }, 1000);
       }
     }
   }
-  
-  updateGameInFirebase(): void {
-    if (this.game.id) {
-      this.gameService.updateGame(this.game.id, this.game)
-        .then(() => {
-          console.log('Spiel in Firebase aktualisiert.');
-        })
-        .catch(error => {
-          console.error('Fehler beim Aktualisieren des Spiels:', error);
-        });
+
+  async updateGameInFirebase(): Promise<void> {
+    if (this.game?.id) {
+      try {
+        await this.gameService.updateGame(this.game.id, this.game);
+      } catch (error) {
+        console.error('Fehler beim Aktualisieren des Spiels:', error);
+      }
     }
   }
   
@@ -131,11 +136,14 @@ export class GameComponent {
     const dialogRef = this.dialog.open(DialogAddPlayerComponent, {
       data: { name: 'John Doe', animal: '' },
     });
-
+  
     dialogRef.afterClosed().subscribe((name: string) => {
       if (name && name.length > 0) {
         this.game.players.push(name);
+        this.updateGameInFirebase(); 
       }
     });
   }
+  
+  
 }

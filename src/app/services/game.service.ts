@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { doc, getDoc, updateDoc  } from '@angular/fire/firestore';
+import { doc, getDoc, updateDoc, docData  } from '@angular/fire/firestore';
 import { Firestore, collection, collectionData, addDoc } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 import { Game } from '../../models/game';
@@ -16,6 +16,11 @@ export class GameService {
   getGamesSnapshot(): Observable<Game[]> {
     const gamesCollection = collection(this.firestore, 'Games');
     return collectionData(gamesCollection, { idField: 'id' }) as Observable<Game[]>;
+  }
+  
+  getGameSnapshot(gameId: string): Observable<Game> {
+    const gameDocRef = doc(this.firestore, `Games/${gameId}`);
+    return docData(gameDocRef, { idField: 'id' }) as Observable<Game>;
   }
   
 
@@ -39,10 +44,12 @@ async getGameById(gameId: string): Promise<Game | undefined> {
     return undefined;
   }
 }
-
 async updateGame(gameId: string, updatedGame: Game): Promise<void> {
   const gameDocRef = doc(this.firestore, `Games/${gameId}`);
   await updateDoc(gameDocRef, { ...updatedGame });
+  console.log('Firebase-Update gesendet:', updatedGame);
 }
+
+
 }
 
